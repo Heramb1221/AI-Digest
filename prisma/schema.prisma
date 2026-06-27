@@ -1,0 +1,308 @@
+// prisma/schema.prisma
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL") // needed for Neon (connection pooling vs direct)
+}
+
+// ─── Enums ────────────────────────────────────────────────────────────────────
+
+enum Plan {
+  FREE
+  PRO
+  TEAM
+}
+
+enum SourceType {
+  RSS
+  YOUTUBE
+  REDDIT
+  EMAIL
+  SCRAPE
+}
+
+enum Category {
+  TECHNICAL
+  BUSINESS
+  TRENDS
+  TOOLS
+  NEWS
+  UNCATEGORISED
+}
+
+enum TeamRole {
+  OWNER
+  ADMIN
+  MEMBER
+}
+
+// ─── Auth tables (required by Auth.js PrismaAdapter) ─────────────────────────
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+// ─── Core models ──────────────────────────────────────────────────────────────
+
+model User {
+  id               String   @id @default(cuid())
+  email            String   @unique
+  emailVerified    DateTime?
+  passwordHash     String?
+  name             String?
+  image            String?
+  plan             Plan     @default(FREE)
+  stripeCustomerId String?  @unique
+
+  // BYOK — stored AES-256 encrypted, never returned in API responses
+  geminiApiKey     String?
+
+  // Referral
+  referralCode     String   @unique @default(cuid())
+  referredBy       String?
+
+  // Email digest settings
+  digestEmailEnabled Boolean  @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  accounts     Account[]
+  sessions     Session[]
+  sources      Source[]
+  seenArticles SeenArticle[]
+  bookmarks    Bookmark[]
+  teams        TeamMember[]
+  digestRuns   DigestRun[]
+
+  @@index([email])
+  @@index([stripeCustomerId])
+}
+
+model Team {
+  id               String  @id @default(cuid())
+  name             String
+  slug             String  @unique
+  plan             Plan    @default(FREE)
+  stripeCustomerId String? @unique
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  members TeamMember[]
+  sources Source[]
+
+  @@index([slug])
+}
+
+model TeamMember {
+  id     String   @id @default(cuid())
+  userId String
+  teamId String
+  role   TeamRole @default(MEMBER)
+
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  team Team @relation(fields: [teamId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, teamId])
+}
+
+model Source {
+  id          String     @id @default(cuid())
+  userId      String?
+  teamId      String?
+  type        SourceType
+  name        String
+  url         String
+  isActive    Boolean    @default(true)
+  lastFetched DateTime?
+  faviconUrl  String?    // cached favicon for UI
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user     User?     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  team     Team?     @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  articles Article[]
+
+  @@index([userId])
+  @@index([teamId])
+}
+
+model Article {
+  id          String    @id @default(cuid())
+  sourceId    String
+  title       String
+  url         String    @unique  // global dedupe key
+  content     String?   @db.Text
+  summary     String?   @db.Text
+  category    Category  @default(UNCATEGORISED)
+  importance  Int       @default(3)  // 1–5
+  publishedAt DateTime?
+  fetchedAt   DateTime  @default(now())
+
+  source    Source        @relation(fields: [sourceId], references: [id], onDelete: Cascade)
+  seenBy    SeenArticle[]
+  bookmarks Bookmark[]
+
+  @@index([sourceId])
+  @@index([category])
+  @@index([importance])
+  @@index([publishedAt])
+}
+
+model SeenArticle {
+  id        String   @id @default(cuid())
+  userId    String
+  articleId String
+  seenAt    DateTime @default(now())
+
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  article Article @relation(fields: [articleId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, articleId])  // core deduplication constraint
+  @@index([userId])
+}
+
+model Bookmark {
+  id        String   @id @default(cuid())
+  userId    String
+  articleId String
+  createdAt DateTime @default(now())
+
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  article Article @relation(fields: [articleId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, articleId])
+  @@index([userId])
+}
+
+model DigestRun {
+  id           String    @id @default(cuid())
+  userId       String
+  startedAt    DateTime  @default(now())
+  completedAt  DateTime?
+  articlesNew  Int       @default(0)
+  articlesSeen Int       @default(0)
+  status       String    @default("running")  // running | done | failed
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([startedAt])
+}
+
+model ReferralReward {
+  id         String   @id @default(cuid())
+  referrerId String
+  refereeId  String   @unique  // prevent double-crediting
+  months     Int      @default(1)
+  awardedAt  DateTime @default(now())
+}
+
+// Per-source log entry within a DigestRun.
+// Lets us show users exactly which feeds succeeded/failed and why.
+model DigestRunLog {
+  id           String   @id @default(cuid())
+  digestRunId  String
+  sourceId     String
+  sourceName   String
+  status       String   // "ok" | "error" | "empty" | "skipped"
+  itemsFetched Int      @default(0)
+  itemsNew     Int      @default(0)
+  itemsSeen    Int      @default(0)
+  error        String?  @db.Text
+  durationMs   Int?
+  createdAt    DateTime @default(now())
+
+  @@index([digestRunId])
+  @@index([sourceId])
+}
+
+// Tracks consecutive failures per source for the health-check cron.
+// Auto-deactivates sources that fail 5+ times in a row.
+model SourceHealth {
+  id               String    @id @default(cuid())
+  sourceId         String    @unique
+  consecutiveFails Int       @default(0)
+  lastCheckedAt    DateTime  @default(now())
+  lastErrorAt      DateTime?
+  lastError        String?   @db.Text
+  isHealthy        Boolean   @default(true)
+
+  @@index([sourceId])
+  @@index([isHealthy])
+}
+
+// Invite tokens for team membership.
+// Generated when an OWNER/ADMIN invites someone by email.
+// Token is single-use and expires in 7 days.
+model TeamInvite {
+  id        String    @id @default(cuid())
+  teamId    String
+  email     String
+  token     String    @unique @default(cuid())
+  role      TeamRole  @default(MEMBER)
+  createdBy String    // userId of the inviter
+  expiresAt DateTime
+  acceptedAt DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([teamId])
+  @@index([token])
+  @@index([email])
+}
+
+// Single-use password reset token.
+// Generated when a user requests a password reset email.
+// Expires in 1 hour.
+model PasswordResetToken {
+  id        String   @id @default(cuid())
+  userId    String
+  token     String   @unique @default(cuid())
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime @default(now())
+
+  @@index([token])
+  @@index([userId])
+}

@@ -1,0 +1,15 @@
+{
+  "extends": ["next/core-web-vitals", "next/typescript"],
+  "rules": {
+    // Allow unused vars prefixed with _ (common pattern for destructuring)
+    "@typescript-eslint/no-unused-vars": ["warn", { "argsIgnorePattern": "^_", "varsIgnorePattern": "^_" }],
+    // Allow any in escape hatches (Prisma types, etc.)
+    "@typescript-eslint/no-explicit-any": "warn",
+    // Enforce consistent imports
+    "import/no-duplicates": "warn",
+    // No console.log in production code (use lib/logger.ts)
+    "no-console": ["warn", { "allow": ["warn", "error"] }],
+    // Next.js Image component over img tag
+    "@next/next/no-img-element": "off"
+  }
+}
