@@ -1,7 +1,7 @@
 // app/api/referral/apply/route.ts
 // POST { referralCode } — validates a referral code and returns the referrer's name
 // so the signup page can show a personalised "You were referred by X" message.
-// The actual credit is applied in the registration route and Stripe webhook.
+// The actual credit is applied in the registration route.
 
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";

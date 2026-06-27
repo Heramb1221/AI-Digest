@@ -6,7 +6,6 @@ import type { Metadata }      from "next";
 import { auth }               from "@/lib/auth";
 import { db }                 from "@/lib/db";
 import { DashboardClient }    from "./dashboard-client";
-import { UpgradedToast }      from "./upgraded-toast";
 
 export const metadata: Metadata = { title: "Digest" };
 
@@ -23,8 +22,6 @@ export default async function DashboardPage() {
 
   return (
     <>
-      {/* Self-contained Suspense inside UpgradedToast */}
-      <UpgradedToast />
       <DashboardClient
         sources={sources}
         plan={plan}

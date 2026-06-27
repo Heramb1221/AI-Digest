@@ -32,42 +32,11 @@ const PLANS = [
 ];
 
 export default function BillingPage() {
-  const { toast } = useToast();
   const [settings,  setSettings]  = useState<UserSettings | null>(null);
-  const [upgrading, setUpgrading] = useState<string | null>(null);
-  const [portalLoading, setPortalLoading] = useState(false);
 
   useEffect(() => {
     fetch("/api/user/settings").then((r) => r.json()).then(setSettings);
   }, []);
-
-  async function handleUpgrade(planId: string) {
-    setUpgrading(planId);
-    const res  = await fetch("/api/stripe/checkout", {
-      method:  "POST",
-      headers: { "Content-Type": "application/json" },
-      body:    JSON.stringify({ plan: planId }),
-    });
-    const data = await res.json();
-    setUpgrading(null);
-    if (data.url) {
-      window.location.href = data.url;
-    } else {
-      toast({ title: "Could not open checkout.", type: "error" });
-    }
-  }
-
-  async function handlePortal() {
-    setPortalLoading(true);
-    const res  = await fetch("/api/stripe/portal", { method: "POST" });
-    const data = await res.json();
-    setPortalLoading(false);
-    if (data.url) {
-      window.location.href = data.url;
-    } else {
-      toast({ title: "No billing account found.", type: "error" });
-    }
-  }
 
   const currentPlan = settings?.plan ?? "FREE";
 
@@ -110,33 +79,10 @@ export default function BillingPage() {
                   ))}
                 </ul>
               </div>
-
-              {plan.cta && !isCurrent && (
-                <Button
-                  size="sm"
-                  loading={upgrading === plan.id}
-                  onClick={() => handleUpgrade(plan.id)}
-                  className="shrink-0 self-start"
-                >
-                  <Zap size={12} /> {plan.cta}
-                </Button>
-              )}
             </div>
           );
         })}
       </div>
-
-      {/* Manage subscription */}
-      {currentPlan !== "FREE" && (
-        <div className="pt-2">
-          <Button variant="outline" size="sm" loading={portalLoading} onClick={handlePortal}>
-            <ExternalLink size={13} /> Manage subscription
-          </Button>
-          <p className="text-xs text-ink-faint mt-1.5">
-            Cancel, change payment method, or view invoices on the Stripe billing portal.
-          </p>
-        </div>
-      )}
     </div>
   );
 }
