@@ -16,8 +16,8 @@ import type { Plan } from "@prisma/client";
 interface AppShellProps {
   user: {
     id:    string;
-    name:  string | null;
-    email: string;
+    name?: string | null;
+    email?: string | null;
     plan:  Plan;
   };
   children: React.ReactNode;
@@ -106,7 +106,7 @@ export function AppShell({ user, children }: AppShellProps) {
           {/* User info */}
           <div className="flex items-center gap-2.5 px-3 py-2 rounded-md">
             <div className="h-6 w-6 rounded-full bg-accent-subtle flex items-center justify-center text-accent text-xs font-semibold shrink-0">
-              {(user.name ?? user.email)[0].toUpperCase()}
+              {(user.name ?? user.email ?? "?")[0].toUpperCase()}
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-xs font-medium truncate">{user.name ?? "Account"}</p>

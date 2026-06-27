@@ -134,7 +134,7 @@ export function ArticleList({
         {/* Article rows grouped by date */}
         {!loading && !error && articles.length > 0 && (
           <>
-            {[...grouped.entries()].map(([dateLabel, group]) => (
+            {Array.from(grouped.entries()).map(([dateLabel, group]) => (
               <div key={dateLabel}>
                 {/* Date section divider */}
                 <div className="section-divider">{dateLabel}</div>

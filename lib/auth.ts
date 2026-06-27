@@ -6,29 +6,6 @@ import { db } from "@/lib/db";
 import bcrypt from "bcryptjs";
 import type { Plan } from "@prisma/client";
 
-// Extend session types
-declare module "next-auth" {
-  interface Session {
-    user: {
-      id:    string;
-      email: string;
-      name:  string | null;
-      image: string | null;
-      plan:  Plan;
-    };
-  }
-  interface User {
-    plan: Plan;
-  }
-}
-
-declare module "next-auth/jwt" {
-  interface JWT {
-    id:   string;
-    plan: Plan;
-  }
-}
-
 export const { handlers, auth, signIn, signOut } = NextAuth({
   adapter: PrismaAdapter(db),
 
@@ -87,7 +64,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     // Persist plan + id into the JWT token
     async jwt({ token, user }) {
       if (user) {
-        token.id   = user.id;
+        token.id   = user.id!;
         token.plan = user.plan;
       }
       return token;

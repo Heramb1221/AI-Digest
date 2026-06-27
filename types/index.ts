@@ -1,7 +1,7 @@
 // types/index.ts
 // Shared TypeScript types used across the frontend and API layer.
 
-import type { Plan, Category, SourceType } from "@prisma/client";
+import type { Plan, Category, SourceType, Source, DigestRun } from "@prisma/client";
 
 // ─── API response shapes ──────────────────────────────────────────────────────
 
