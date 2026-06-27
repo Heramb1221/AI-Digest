@@ -33,9 +33,8 @@ export async function GET(req: NextRequest) {
 
   // ── 1. Find unhealthy sources ─────────────────────────────────────────────
   const unhealthySources = await db.sourceHealth.findMany({
-    where: { isHealthy: false },
-    include: {
-      // We need to join Source → User to get the owner's email
+    where: {
+      isHealthy: false,
     },
   });
 
