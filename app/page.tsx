@@ -1,7 +1,6 @@
 // app/page.tsx — AI Digest landing page
 // Design: Editorial newsroom — ink-black canvas, amber accent, monospace timestamps.
 // Signature element: animated headline ticker that looks like a live wire.
-
 import Link   from "next/link";
 import type { Metadata } from "next";
 
@@ -382,7 +381,7 @@ export default function LandingPage() {
             href="/signup"
             className="inline-block px-8 py-3 font-semibold bg-[#F59E0B] text-[#0A0A0A] rounded-xl hover:bg-[#F59E0B]/90 transition-colors text-sm"
           >
-            Get started — it's free
+            Get started — its free
           </Link>
         </div>
       </section>
@@ -406,14 +405,6 @@ export default function LandingPage() {
           </div>
         </div>
       </footer>
-
-      {/* ── Ticker animation ─────────────────────────────────────────────── */}
-      <style jsx global>{`
-        @keyframes ticker {
-          from { transform: translateX(0); }
-          to   { transform: translateX(-50%); }
-        }
-      `}</style>
 
     </div>
   );
